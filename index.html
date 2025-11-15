@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Eventos del DOM</title>
+    <style>
+        /* === ESTILOS GLOBALES (DARK MODE POR DEFECTO) === */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #cccccc;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .slideshow-container { position: relative; width: 90%; max-width: 960px; }
+        
+        .slide {
+            display: none;
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            height: 540px; padding: 40px 60px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            flex-direction: column; justify-content: center; position: relative;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .fade { animation-name: fade; animation-duration: 0.5s; }
+        @keyframes fade { from {opacity: .4} to {opacity: 1} }
+
+        .prev, .next {
+            cursor: pointer; position: absolute; top: 50%; transform: translateY(-50%);
+            width: 50px; height: 50px; background-color: #333; color: #f1f1f1;
+            border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 24px; transition: all 0.3s ease;
+            user-select: none; z-index: 10;
+        }
+        .prev:hover, .next:hover { background-color: #555; }
+        .prev { left: -70px; }
+        .next { right: -70px; }
+
+        .slide h1 { font-size: 3.5em; text-align: center; border-bottom: 4px solid #3498db; padding-bottom: 20px; color: #3498db; }
+        .slide h2 { font-size: 2.8em; margin: 0 0 30px; text-align: center; color: #3498db; }
+        .single-content p { font-size: 1.3em; color: #cccccc; text-align: center; margin-bottom: 20px;}
+        pre { width: 90%; max-width: 700px; margin: 0 auto; background-color: #2b2b2b; color: #f1f1f1; padding: 15px; border-radius: 5px; font-size: 1.1em; white-space: pre-wrap; border: 1px solid #444; text-align: left; }
+        .footer { position: absolute; bottom: 20px; right: 40px; font-size: 1em; color: #888; }
+
+        .subtitle { color: #e0e0e0; font-size: 2em; font-weight: bold; margin: 0 0 30px; text-align: center; }
+        
+        /* === ESTILOS DEL SWITCH DE TEMA === */
+        .theme-switch-wrapper { position: fixed; top: 15px; right: 15px; z-index: 100; }
+        #theme-switch {
+            cursor: pointer; padding: 8px 12px; border-radius: 20px;
+            border: 1px solid #555; background-color: #333; color: #f1f1f1;
+            font-size: 0.9em; transition: all 0.3s ease;
+        }
+        #theme-switch:hover { background-color: #555; }
+
+        /* === ESTILOS DEL LIGHT MODE === */
+        body.light-mode { background-color: #f0f0f0; color: #333; }
+        body.light-mode .slide { background-color: #fff; border-color: #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        body.light-mode .slide h1 { color: #005A9C; border-color: #3498db; }
+        body.light-mode .slide h2 { color: #005A9C; }
+        body.light-mode .subtitle { color: #333; }
+        body.light-mode .single-content p { color: #444; }
+        body.light-mode pre { background-color: #e3e8e8; border-color: transparent; color: #1e1e1e; }
+        body.light-mode .prev, body.light-mode .next { background-color: #cccccc; color: #333; }
+        body.light-mode .prev:hover, body.light-mode .next:hover { background-color: #aaaaaa; }
+        body.light-mode #theme-switch { background-color: #fff; color: #333; border-color: #ccc; }
+        body.light-mode #theme-switch:hover { background-color: #eee; }
+
+        /* === MEDIA QUERIES === */
+        @media screen and (max-width: 768px) {
+            body { padding: 15px; }
+            .slideshow-container { width: 100%; padding-bottom: 75px; }
+            .slide { height: auto; min-height: 75vh; padding: 20px 25px; }
+            .prev, .next { top: auto; bottom: 15px; width: 45px; height: 45px; }
+            .prev { left: 50%; transform: translateX(-110%); }
+            .next { left: 50%; transform: translateX(10%); right: auto; }
+            .slide h1 { font-size: 2.2em; }
+            .slide h2 { font-size: 1.8em; }
+            .single-content p { font-size: 1.1em; }
+            pre { font-size: 0.9em; }
+            .footer { font-size: 0.8em; right: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="theme-switch-wrapper">
+        <button id="theme-switch">Light Mode</button>
+    </div>
+
+    <div class="slideshow-container">
+        
+        <!-- =============================================================== -->
+        <!-- INICIO DEL CONTENIDO DE LAS DIAPOSITIVAS -->
+        <!-- =============================================================== -->
+
+        <div class="slide fade">
+            <h1>Cheat Sheet de JavaScript</h1>
+            <div class="subtitle">DOM Events</div>
+            <div class="footer">1 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>¿Qué es un Evento?</h2>
+            <div class="single-content">
+                <p>Un evento es una señal de que algo ha ocurrido. Puede ser una acción del usuario (como un clic) o una acción del navegador (como terminar de cargar la página).</p>
+                <pre><code>// Acciones del Usuario:
+// - Hacer clic en un botón ('click')
+// - Mover el ratón ('mousemove')
+// - Pulsar una tecla ('keydown')
+
+// Acciones del Navegador:
+// - La página ha terminado de cargar ('load')
+// - Un video ha empezado a reproducirse ('play')</code></pre>
+            </div>
+            <div class="footer">2 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>El Flujo de la Gestión de Eventos</h2>
+            <div class="single-content">
+                <p>El proceso para hacer una página interactiva siempre sigue tres pasos:</p>
+                <p><b>1. Seleccionar</b> el elemento HTML que originará el evento.<br><b>2. Escuchar</b> un tipo de evento específico en ese elemento.<br><b>3. Reaccionar</b> ejecutando una función cuando el evento ocurra.</p>
+                <pre><code>// 1. Seleccionar
+const miBoton = document.querySelector('#mi-boton');
+
+// 2. Escuchar y 3. Reaccionar
+miBoton.addEventListener('click', function() {
+  console.log('¡Botón pulsado!');
+});</code></pre>
+            </div>
+            <div class="footer">3 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>El Método: `addEventListener()`</h2>
+            <div class="single-content">
+                <p>Es la forma moderna, estándar y recomendada para registrar un "escuchador de eventos". Es más flexible que métodos antiguos como `onclick`.</p>
+                <pre><code>elemento.addEventListener('tipoDeEvento', funcionManejadora);
+
+// 'tipoDeEvento': Un string con el nombre del evento (ej: 'click').
+// 'funcionManejadora': La función que se ejecutará. También se le
+//                    llama "función de callback".</code></pre>
+            </div>
+            <div class="footer">4 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>Ventajas de `addEventListener()`</h2>
+            <div class="single-content">
+                <p>A diferencia de `elemento.onclick`, podemos añadir múltiples "escuchadores" para el mismo evento en el mismo elemento sin sobreescribir los anteriores.</p>
+                <pre><code>const boton = document.querySelector('#login-btn');
+
+// Esto funciona perfectamente
+boton.addEventListener('click', validarFormulario);
+boton.addEventListener('click', enviarAnaliticas);
+
+// Con el método antiguo, solo funcionaría el último
+// boton.onclick = validarFormulario;
+// boton.onclick = enviarAnaliticas; // ¡Sobreescribe el anterior!</code></pre>
+            </div>
+            <div class="footer">5 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>Eventos de Ratón (Mouse)</h2>
+            <div class="single-content">
+                <p>Son los más comunes y se refieren a las interacciones con el puntero.</p>
+                <pre><code>'click'       // Un solo clic.
+'dblclick'    // Doble clic.
+'mousedown'   // Se presiona el botón del ratón.
+'mouseup'     // Se suelta el botón del ratón.
+'mousemove'   // El puntero se mueve sobre el elemento.</code></pre>
+            </div>
+            <div class="footer">6 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>`mouseover` vs `mouseenter`</h2>
+            <div class="single-content">
+                <p>Una distinción importante. `mouseover` se dispara también en los hijos (burbujea), mientras que `mouseenter` solo se dispara en el elemento padre.</p>
+                <pre><code>const cajaPadre = document.querySelector('#padre');
+
+// mouseover: Se dispara al entrar en #padre Y al entrar en #hijo
+cajaPadre.addEventListener('mouseover', () => console.log('Over!'));
+
+// mouseenter: Solo se dispara al entrar en #padre
+cajaPadre.addEventListener('mouseenter', () => console.log('Enter!'));
+// 'mouseout' y 'mouseleave' tienen la misma diferencia.</code></pre>
+            </div>
+            <div class="footer">7 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos de Teclado (Keyboard)</h2>
+            <div class="single-content">
+                <p>Permiten reaccionar a la pulsación de teclas. Son esenciales para atajos, validaciones en tiempo real y juegos.</p>
+                <pre><code>// Se dispara cuando una tecla es presionada.
+document.addEventListener('keydown', function(event) {
+  // 'event.key' nos dice qué tecla fue ("a", "Enter", "F5")
+  if (event.key === 'Escape') {
+    cerrarModal();
+  }
+});
+
+// 'keyup': Se dispara cuando la tecla se suelta.
+// 'keypress': Antiguo, mejor evitarlo.</code></pre>
+            </div>
+            <div class="footer">8 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos de Formulario</h2>
+            <div class="single-content">
+                <p>Fundamentales para la validación y el envío de datos.</p>
+                <pre><code>const miFormulario = document.querySelector('#registro');
+
+// 'submit': Se dispara al intentar enviar el formulario.
+miFormulario.addEventListener('submit', function(event) {
+  // Evita que la página se recargue (acción por defecto)
+  event.preventDefault();
+  
+  // Aquí iría nuestra lógica para enviar los datos con JS
+  console.log('Formulario enviado sin recargar.');
+});</code></pre>
+            </div>
+            <div class="footer">9 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>Eventos de Inputs: `input` vs `change`</h2>
+            <div class="single-content">
+                <p><b>`input`</b>: Se dispara <b>inmediatamente</b> cada vez que el valor del elemento cambia. Ideal para feedback en tiempo real.<br><br><b>`change`</b>: Se dispara cuando el valor se "confirma", normalmente cuando el elemento pierde el foco (`blur`).</p>
+                <pre><code>const campoTexto = document.querySelector('#usuario');
+
+// Se ejecuta con cada letra que escribes
+campoTexto.addEventListener('input', () => console.log('Escribiendo...'));
+
+// Se ejecuta solo cuando sales del campo de texto
+campoTexto.addEventListener('change', () => console.log('Valor confirmado.'));</code></pre>
+            </div>
+            <div class="footer">10 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos de Foco: `focus` y `blur`</h2>
+            <div class="single-content">
+                <p>Permiten saber cuándo un usuario entra o sale de un elemento interactivo, como un campo de texto o un botón.</p>
+                <pre><code>const input = document.querySelector('#mi-input');
+
+// Cuando el usuario hace clic o tabula hacia el input
+input.addEventListener('focus', () => {
+  input.style.border = '2px solid blue';
+});
+
+// Cuando el usuario hace clic o tabula fuera del input
+input.addEventListener('blur', () => {
+  input.style.border = '1px solid grey';
+});</code></pre>
+            </div>
+            <div class="footer">11 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos de Documento y Ventana</h2>
+            <div class="single-content">
+                <p>Eventos que se aplican a toda la página o a la ventana del navegador.</p>
+                <pre><code>// 'DOMContentLoaded': Se dispara cuando el HTML ha sido cargado
+// y el árbol del DOM está listo. Es el mejor momento para
+// ejecutar nuestro script de manipulación del DOM.
+document.addEventListener('DOMContentLoaded', inicializarApp);
+
+// 'load': Espera a que TODO (imágenes, CSS, etc.) cargue. Más lento.
+window.addEventListener('load', () => console.log('Todo cargado.'));</code></pre>
+            </div>
+            <div class="footer">12 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos de `scroll` y `resize`</h2>
+            <div class="single-content">
+                <p>Permiten reaccionar al desplazamiento de la página o al cambio de tamaño de la ventana.</p>
+                <pre><code>// 'scroll': Se dispara continuamente mientras el usuario hace scroll.
+// ¡Puede afectar al rendimiento! Se debe usar con cuidado (throttling).
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 100) {
+    // mostrar un botón de "volver arriba"
+  }
+});
+
+// 'resize': Se dispara cuando se redimensiona la ventana.
+window.addEventListener('resize', adaptarLayout);</code></pre>
+            </div>
+            <div class="footer">13 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>El Objeto `event`</h2>
+            <div class="single-content">
+                <p>La función manejadora siempre recibe un argumento de forma automática: el objeto `event`. Contiene información valiosísima sobre la interacción que acaba de ocurrir.</p>
+                <pre><code>elemento.addEventListener('click', function(event) {
+  // 'event' es un objeto lleno de propiedades útiles
+  console.log(event);
+});</code></pre>
+            </div>
+            <div class="footer">14 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>`event.target` y `event.currentTarget`</h2>
+            <div class="single-content">
+                <p><b>`event.target`</b>: Es el elemento específico que <b>originó</b> el evento. Si tienes un div con un botón dentro, y haces clic en el botón, `event.target` será el botón.<br><br><b>`event.currentTarget`</b>: Es el elemento donde el `addEventListener` está <b>adjuntado</b>. En el mismo ejemplo, sería el div.</p>
+                <pre><code>divContenedor.addEventListener('click', function(event) {
+  console.log(event.target);       // Puede ser el botón, un p, etc.
+  console.log(event.currentTarget); // Siempre será divContenedor
+});</code></pre>
+            </div>
+            <div class="footer">15 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>`event.preventDefault()`</h2>
+            <div class="single-content">
+                <p>Cancela el comportamiento por defecto del navegador para un evento. Esencial para manejar envíos de formularios y clics en enlaces con JavaScript.</p>
+                <pre><code>const link = document.querySelector('a');
+const form = document.querySelector('form');
+
+link.addEventListener('click', function(event) {
+  event.preventDefault(); // Evita la navegación a la URL del enlace
+  console.log('Navegación cancelada.');
+});
+
+form.addEventListener('submit', function(event) {
+  event.preventDefault(); // Evita la recarga de la página
+});</code></pre>
+            </div>
+            <div class="footer">16 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>El Flujo de Eventos: Captura y Burbujeo</h2>
+            <div class="single-content">
+                <p>Cuando un evento ocurre (ej: un clic en un botón), no solo ocurre en ese botón. El evento viaja a través de sus ancestros en el DOM. Este viaje tiene dos fases.</p>
+                <pre><code>Fase de Captura (hacia abajo): window -> document -> body -> div -> botón
+Fase de Burbujeo (hacia arriba): botón -> div -> body -> document -> window</code></pre>
+            </div>
+            <div class="footer">17 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Fase de Burbujeo (Bubbling)</h2>
+            <div class="single-content">
+                <p>Por defecto, `addEventListener` escucha los eventos en la fase de burbujeo. Esto significa que el evento se dispara primero en el elemento más interno (`event.target`) y luego "burbujea" hacia arriba a través de sus padres.</p>
+                <pre><code>// Si haces clic en el botón, verás los logs en este orden:
+// 1. "Clic en el Botón"
+// 2. "Clic en el Div"
+// 3. "Clic en el Body"
+body.addEventListener('click', () => console.log('Clic en el Body'));
+div.addEventListener('click', () => console.log('Clic en el Div'));
+boton.addEventListener('click', () => console.log('Clic en el Botón'));</code></pre>
+            </div>
+            <div class="footer">18 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>Fase de Captura (Capturing)</h2>
+            <div class="single-content">
+                <p>Podemos decirle a `addEventListener` que escuche en la fase de captura pasando un tercer argumento. Es menos común, pero útil en ciertos escenarios.</p>
+                <pre><code>// Al hacer clic en el botón, el orden ahora se invierte:
+// 1. "Captura en el Body"
+// 2. "Captura en el Div"
+// 3. "Burbujeo en el Botón"
+body.addEventListener('click', ..., { capture: true });
+div.addEventListener('click', ..., { capture: true });
+boton.addEventListener('click', ..., { capture: false }); // o por defecto</code></pre>
+            </div>
+            <div class="footer">19 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>`event.stopPropagation()`</h2>
+            <div class="single-content">
+                <p>Este método detiene la propagación del evento, es decir, evita que siga burbujeando (o capturándose) hacia los ancestros.</p>
+                <pre><code>div.addEventListener('click', () => console.log('Clic en el Div'));
+
+boton.addEventListener('click', function(event) {
+  event.stopPropagation(); // ¡Detiene la burbuja aquí!
+  console.log('Clic en el Botón');
+});
+
+// Al hacer clic en el botón, solo se verá "Clic en el Botón".
+// El listener del div nunca se enterará del evento.</code></pre>
+            </div>
+            <div class="footer">20 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Patrón Avanzado: Delegación de Eventos</h2>
+            <div class="single-content">
+                <p><b>Problema:</b> ¿Qué pasa si tienes una lista con 100 ítems y quieres que cada uno reaccione al clic? ¿Añadir 100 `addEventListener`? ¡No! Es ineficiente.<br><br><b>Solución:</b> Aprovechar el burbujeo. Se añade <b>un solo</b> `addEventListener` al contenedor padre.</p>
+                <pre><code>&lt;ul id="lista-tareas"&gt;
+  &lt;li&gt;Comprar pan&lt;/li&gt;
+  &lt;li&gt;Pasear al perro&lt;/li&gt;
+  &lt;li&gt;Estudiar JavaScript&lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+            </div>
+            <div class="footer">21 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>Delegación de Eventos en Práctica</h2>
+            <div class="single-content">
+                <p>Dentro del manejador del padre, usamos `event.target` para identificar qué hijo fue el que realmente originó el clic.</p>
+                <pre><code>const lista = document.querySelector('#lista-tareas');
+
+lista.addEventListener('click', function(event) {
+  // Comprobamos si el elemento clickeado es un LI
+  if (event.target.tagName === 'LI') {
+    // Aplicamos el estilo solo al LI que se clickeó
+    event.target.style.textDecoration = 'line-through';
+  }
+});</code></pre>
+            </div>
+            <div class="footer">22 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>Ventajas de la Delegación</h2>
+            <div class="single-content">
+                <p>1. <b>Mejor rendimiento:</b> Menos "escuchadores" consumen menos memoria.<br>2. <b>Maneja elementos dinámicos:</b> Si añades nuevos `<li>` a la lista con JavaScript, la delegación funcionará automáticamente para ellos, sin necesidad de añadirles un nuevo listener.</p>
+                <pre><code>// Este nuevo LI funcionará con el listener del padre
+// sin necesidad de hacer nada más.
+const nuevoItem = document.createElement('li');
+nuevoItem.textContent = 'Nuevo item dinámico';
+lista.append(nuevoItem);</code></pre>
+            </div>
+            <div class="footer">23 / 30</div>
+        </div>
+
+        <div class="slide fade">
+            <h2>Eliminar Event Listeners</h2>
+            <div class="single-content">
+                <p>Para evitar "fugas de memoria" (`memory leaks`), es buena práctica eliminar los listeners que ya no se necesitan usando `removeEventListener`.</p>
+                <pre><code>elemento.removeEventListener('tipoDeEvento', funcionManejadora);
+
+// ¡Importante! Debes pasarle exactamente la misma función
+// que usaste en addEventListener. No funciona con
+// funciones anónimas.</code></pre>
+            </div>
+            <div class="footer">24 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>`removeEventListener`: Ejemplo</h2>
+            <div class="single-content">
+                <p>Para poder eliminar un listener, la función manejadora debe ser una función con nombre, no una anónima.</p>
+                <pre><code>const boton = document.querySelector('#mi-boton');
+
+function manejadorDeClic() {
+  console.log('Clic!');
+  // Tras el primer clic, eliminamos el listener
+  boton.removeEventListener('click', manejadorDeClic);
+}
+
+boton.addEventListener('click', manejadorDeClic);
+
+// Esto NO se podría eliminar:
+// boton.addEventListener('click', () => console.log('clic'));</code></pre>
+            </div>
+            <div class="footer">25 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos Personalizados</h2>
+            <div class="single-content">
+                <p>JavaScript nos permite crear y disparar nuestros propios eventos. Esto es muy útil para desacoplar componentes y mejorar la arquitectura de aplicaciones complejas.</p>
+                <pre><code>// 1. Crear un nuevo evento
+const miEvento = new CustomEvent('datosCargados', {
+  detail: { id: 123, status: 'ok' } // 'detail' puede llevar datos
+});
+
+// 2. Un elemento escucha nuestro evento personalizado
+document.addEventListener('datosCargados', function(event) {
+  console.log('Datos recibidos:', event.detail);
+});
+
+// 3. Otro lugar del código dispara (dispatch) el evento
+document.dispatchEvent(miEvento);</code></pre>
+            </div>
+            <div class="footer">26 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos de Puntero (`Pointer Events`)</h2>
+            <div class="single-content">
+                <p>Son una evolución moderna de los eventos de ratón. Unifican el manejo de interacciones de ratón, lápiz táctil y dedos (touch) en un solo conjunto de eventos.</p>
+                <pre><code>'pointerdown'   // Se presiona (ratón, dedo, lápiz)
+'pointerup'     // Se levanta
+'pointermove'   // Se mueve
+'pointerenter'  // Entra al área
+'pointerleave'  // Sale del área
+
+// Usarlos simplifica el código para dispositivos táctiles y de escritorio.</code></pre>
+            </div>
+            <div class="footer">27 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Eventos de Transición y Animación</h2>
+            <div class="single-content">
+                <p>Podemos ejecutar código JavaScript cuando una transición o animación de CSS termina.</p>
+                <pre><code>const caja = document.querySelector('.animada');
+
+// Se dispara cuando una transición CSS finaliza
+caja.addEventListener('transitionend', () => {
+  console.log('La transición ha terminado.');
+  caja.classList.remove('moviendose');
+});
+
+// 'animationend': el equivalente para animaciones con @keyframes</code></pre>
+            </div>
+            <div class="footer">28 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Buenas Prácticas</h2>
+            <div class="single-content">
+                <p>1. Usa `DOMContentLoaded` para iniciar tus scripts.<br>2. Prefiere la delegación de eventos para listas y elementos dinámicos.<br>3. Usa `event.preventDefault()` en formularios.<br>4. Elimina listeners (`removeEventListener`) si ya no los necesitas (ej: en Single Page Apps al cambiar de "página").<br>5. Ten cuidado con eventos "ruidosos" como `scroll` y `mousemove`.</p>
+                <pre><code>// La delegación es uno de los patrones
+// más importantes y útiles en la gestión de eventos.
+// ¡Domínalo!</code></pre>
+            </div>
+            <div class="footer">29 / 30</div>
+        </div>
+        
+        <div class="slide fade">
+            <h2>Conclusión</h2>
+            <div class="single-content">
+                <p>La gestión de eventos es el pilar de la interactividad en la web. Entender su flujo, el objeto `event` y patrones como la delegación te permitirá construir aplicaciones ricas, eficientes y robustas.</p>
+                <pre><code>// Has aprendido a escuchar al usuario.
+// Ahora puedes crear experiencias web
+// que respondan a cada una de sus acciones.</code></pre>
+            </div>
+            <div class="footer">30 / 30</div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- FIN DEL CONTENIDO DE LAS DIAPOSITIVAS -->
+        <!-- =============================================================== -->
+
+        <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+        <a class="next" onclick="plusSlides(1)">&#10095;</a>
+    </div>
+
+    <!-- Lógica de JavaScript -->
+    <script>
+        // --- Lógica de la presentación ---
+        let slideIndex = 1;
+        showSlides(slideIndex);
+
+        function plusSlides(n) {
+            showSlides(slideIndex += n);
+        }
+
+        function showSlides(n) {
+            let i;
+            let slides = document.getElementsByClassName("slide");
+            if (n > slides.length) { slideIndex = 1 } 
+            if (n < 1) { slideIndex = slides.length }
+            
+            for (i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";
+            }
+            
+            slides[slideIndex - 1].style.display = "flex";
+        }
+
+        // --- Lógica del cambio de tema (Light/Dark Mode) ---
+        const themeSwitch = document.getElementById('theme-switch');
+        const body = document.body;
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                body.classList.add('light-mode');
+                themeSwitch.textContent = 'Dark Mode';
+            } else {
+                body.classList.remove('light-mode');
+                themeSwitch.textContent = 'Light Mode';
+            }
+        }
+
+        themeSwitch.addEventListener('click', () => {
+            let currentTheme = body.classList.contains('light-mode') ? 'light' : 'dark';
+            let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark'; // Dark mode por defecto
+            applyTheme(savedTheme);
+        });
+
+        // --- Lógica para navegar con flechas del teclado ---
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') {
+                plusSlides(-1);
+            } else if (event.key === 'ArrowRight') {
+                plusSlides(1);
+            }
+        });
+    </script>
+
+</body>
+</html>
